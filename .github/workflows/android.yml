@@ -11,16 +11,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: 21 }
 
       - name: Install
-        run: npm install --legacy-peer-deps
+        run: ./ci/run.sh npm install --legacy-peer-deps
 
       - name: Add Android platform + manifest patch
         run: |
-          npm run build
-          npx cap add android
+          ./ci/run.sh npm run build
+          ./ci/run.sh npx cap add android
           python3 - <<'PY'
           p='android/app/src/main/AndroidManifest.xml'
           s=open(p,encoding='utf-8').read()
@@ -34,7 +34,7 @@ jobs:
       - name: Test APK (debug, 테스트 광고)
         run: |
           npx cap sync android
-          cd android && ./gradlew assembleDebug
+          cd android && ../ci/run.sh ./gradlew assembleDebug
 
       - name: Release web build (실제 광고 ID)
         run: |
@@ -63,7 +63,7 @@ jobs:
 
       - name: Release AAB
         run: |
-          cd android && ./gradlew bundleRelease
+          cd android && ../ci/run.sh ./gradlew bundleRelease
           cd ..
           AAB=$(find android/app/build/outputs/bundle/release -name '*.aab' | head -1)
           jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore release.jks -storepass "$(cat .kspass)" "$AAB" upload
