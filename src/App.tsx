@@ -167,10 +167,9 @@ export default function App() {
           <div className="card">
             <div className="row"><b>⏰ 아침 알림 (7:30)</b><button className="chip" style={{ width: 90 }} onClick={toggleAlarm}>{alarmOn ? '끄기' : '켜기'}</button></div>
           </div>
-          <div className="note">이 앱의 운세는 재미로 보는 오락 콘텐츠이며, 결과를 보장하지 않아요. 중요한 결정은 신중히 판단하세요.<br />v1.0.0</div>
         </>
       )}
-      <div className="note">※ 오락 목적의 운세 콘텐츠입니다</div>
+      <div className="note">중요한 결정은 신중히 판단하세요</div>
     </div>
   );
 }
