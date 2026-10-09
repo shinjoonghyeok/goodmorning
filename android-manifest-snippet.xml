@@ -1,0 +1,7 @@
+<!-- android/app/src/main/AndroidManifest.xml 의 <application ...> 태그 안에 붙여 넣으세요 -->
+<meta-data
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-7397305822305788~2874526952"/>
+
+<!-- <manifest> 바로 아래(<application> 밖)에 추가 -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>

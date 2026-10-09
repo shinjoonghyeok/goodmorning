@@ -1,0 +1,76 @@
+name: Build Android (APK + AAB)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+
+      - name: Install
+        run: npm install --legacy-peer-deps
+
+      - name: Add Android platform + manifest patch
+        run: |
+          npm run build
+          npx cap add android
+          python3 - <<'PY'
+          p='android/app/src/main/AndroidManifest.xml'
+          s=open(p,encoding='utf-8').read()
+          meta='<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-7397305822305788~2874526952"/>\n    '
+          perm='<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    '
+          if 'APPLICATION_ID' not in s: s=s.replace('</application>', '    '+meta+'</application>',1)
+          if 'POST_NOTIFICATIONS' not in s: s=s.replace('<application', perm+'<application',1)
+          open(p,'w',encoding='utf-8').write(s)
+          PY
+
+      - name: Test APK (debug, 테스트 광고)
+        run: |
+          npx cap sync android
+          cd android && ./gradlew assembleDebug
+
+      - name: Release web build (실제 광고 ID)
+        run: |
+          sed -i 's/const IS_TESTING = true;/const IS_TESTING = false;/' src/ads.ts
+          grep -n "IS_TESTING =" src/ads.ts
+          npm run build
+          npx cap sync android
+
+      - name: Prepare keystore
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          mkdir -p out
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > release.jks
+            echo "$KS_PASS" > .kspass
+          else
+            PASS=$(openssl rand -hex 12)
+            keytool -genkeypair -keystore release.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$PASS" -keypass "$PASS" -dname "CN=GoodMorningLuck, O=Shinjoong, C=KR"
+            echo "$PASS" > .kspass
+            cp release.jks out/NEW-upload-keystore.jks
+            printf "alias: upload\npassword: %s\n이 키스토어와 비밀번호를 반드시 백업하세요. 분실하면 앱 업데이트가 어려워요.\n" "$PASS" > out/NEW-keystore-info.txt
+          fi
+
+      - name: Release AAB
+        run: |
+          cd android && ./gradlew bundleRelease
+          cd ..
+          AAB=$(find android/app/build/outputs/bundle/release -name '*.aab' | head -1)
+          jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore release.jks -storepass "$(cat .kspass)" "$AAB" upload
+          cp "$AAB" out/goodmorning-release.aab
+          cp android/app/build/outputs/apk/debug/app-debug.apk out/goodmorning-test.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: goodmorning-android
+          path: out/
