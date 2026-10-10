@@ -66,6 +66,12 @@ jobs:
             printf "alias: upload\npassword: %s\n이 키스토어와 비밀번호를 반드시 백업하세요. 분실하면 앱 업데이트가 어려워요.\n" "$PASS" > out/NEW-keystore-info.txt
           fi
 
+      - name: Show keystore fingerprint
+        run: |
+          FP=$(keytool -list -v -keystore release.jks -storepass "$(cat .kspass)" 2>&1 | grep -m1 "SHA1:" | sed 's/^ *//')
+          echo "::notice title=KEYSTORE FINGERPRINT::$FP"
+          echo "$FP"
+
       - name: Release AAB
         run: |
           cd android && ../ci/run.sh ./gradlew bundleRelease
