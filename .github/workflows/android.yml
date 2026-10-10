@@ -31,6 +31,11 @@ jobs:
           open(p,'w',encoding='utf-8').write(s)
           PY
 
+      - name: Apply app icons
+        run: |
+          cp -r ci/icons/* android/app/src/main/res/
+          ls android/app/src/main/res/mipmap-xxxhdpi
+
       - name: Test APK (debug, 테스트 광고)
         run: |
           npx cap sync android
